@@ -1,0 +1,219 @@
+{% extends 'finance/base.html' %}
+{% load static %}
+
+{% block title %}Savings{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        margin: 1rem;
+    }
+
+    .stat-box {
+        background-color: #f9f9f9;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    .stat-box-row {
+        display: flex;
+        justify-content: space-between;
+        /* spaces out the <p> blocks */
+        align-items: center;
+        padding: 1rem;
+        background-color: #f5f5f5;
+        /* optional: light background */
+        border-radius: 8px;
+        /* optional: rounded corners */
+        gap: 1rem;
+        /* space between items */
+    }
+
+    .stat-box-row p {
+        flex: 1;
+        /* allows all <p> tags to take equal space */
+        margin: 0;
+        text-align: center;
+        /* centers the text inside each <p> */
+        font-weight: 500;
+        /* optional: bold for visibility */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h2>Manage Your Savings Goals</h2>
+
+<!-- Add Goal Button -->
+<button id="show-goal-btn" class="btn btn-primary mb-3">Add Savings Goal</button>
+
+<!-- Form Container - hidden by default -->
+<div id="goal-form-container">
+    <form method="POST" id="goal-form">
+        {% csrf_token %}
+        <input type="hidden" id="goal-id" name="goal_id" value="">
+
+        <div class="form-group">
+            {{ form.goal_name.label_tag }}
+            {{ form.goal_name }}
+        </div>
+
+        <div class="form-group">
+            {{ form.target_amount.label_tag }}
+            {{ form.target_amount }}
+        </div>
+
+        <div class="form-group">
+            {{ form.current_amount.label_tag }}
+            {{ form.current_amount }}
+        </div>
+
+        <div class="form-group">
+            {{ form.target_date.label_tag }}
+            {{ form.target_date }}
+            <small class="text-muted">Select the target date to achieve this goal</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submit-btn">Submit</button>
+        <button type="button" id="cancel-btn" class="btn btn-secondary">Cancel</button>
+    </form>
+</div>
+
+<!-- Stats Section -->
+<div class="stats-container">
+    <div class="stat-box">
+        <p>Total Goals: {{ unique_goals_count|default:"0" }}</p>
+    </div>
+
+    <div class="stat-box-row">
+        <p>Total Target: ₹{{ total_target_amount|floatformat:2 }}</p>
+        <p>Total Saved: ₹{{ total_current_amount|floatformat:2 }}</p>
+        <p>Remaining: ₹{{ total_remaining_amount|floatformat:2 }}</p>
+    </div>
+
+    <div class="stat-box">
+        <div class="progress">
+            <div class="progress-bar" role="progressbar" style="width: {{ total_progress }}%"
+                aria-valuenow="{{ total_progress }}" aria-valuemin="0" aria-valuemax="100">
+                {{ total_progress|floatformat:1 }}%
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<hr>
+<h3>Your Savings Goals</h3>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Goal Name</th>
+            <th>Target Amount</th>
+            <th>Current Amount</th>
+            <th>Progress</th>
+            <th>Days Remaining</th>
+            <th>Target Date</th>
+            <th>Created At</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for goal in goals %}
+        <tr
+            class="{% if goal.days_remaining < 0 %}text-danger{% elif goal.days_remaining < 7 %}text-warning{% endif %}">
+            <td>{{ goal.goal_name }}</td>
+            <td>₹{{ goal.target_amount }}</td>
+            <td>₹{{ goal.current_amount }}</td>
+            <td>
+                <div class="progress">
+                    <div class="progress-bar" role="progressbar" style="width: {{ goal.progress_percentage }}%"
+                        aria-valuenow="{{ goal.progress_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                        {{ goal.progress_percentage }}%
+                    </div>
+                </div>
+            </td>
+            <td>
+                {% if goal.days_remaining >= 0 %}
+                {{ goal.days_remaining }} days
+                {% else %}
+                {{ goal.days_remaining|cut:"-" }} days overdue
+                {% endif %}
+            </td>
+            <td>{{ goal.target_date|date:"M d, Y" }}</td>
+            <td>{{ goal.created_at|date:"M d, Y" }}</td>
+            <td class="action-buttons">
+                <button class="btn-icon edit-btn" data-id="{{ goal.id }}" data-name="{{ goal.goal_name }}"
+                    data-target_amount="{{ goal.target_amount }}" data-current_amount="{{ goal.current_amount }}"
+                    data-target_date="{{ goal.target_date|date:'Y-m-d' }}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <form action="{% url 'delete_goal' goal.id %}" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-icon delete"
+                        onclick="return confirm('Are you sure you want to delete this savings goal?')">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="8">No savings goals found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+
+</table>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const showBtn = document.getElementById('show-goal-btn');
+        const formContainer = document.getElementById('goal-form-container');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const goalForm = document.getElementById('goal-form');
+        const goalIdField = document.getElementById('goal-id');
+        const submitBtn = document.getElementById('submit-btn');
+
+        // Show form when button is clicked
+        showBtn.addEventListener('click', function () {
+            formContainer.style.display = 'block';
+            this.style.display = 'none';
+            goalIdField.value = '';
+            goalForm.reset();
+            submitBtn.textContent = 'Submit';
+        });
+
+        // Hide form when cancel is clicked
+        cancelBtn.addEventListener('click', function () {
+            formContainer.style.display = 'none';
+            showBtn.style.display = 'block';
+            goalForm.reset();
+        });
+
+        // Edit button functionality
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                // Populate form with existing data
+                document.getElementById('id_goal_name').value = this.dataset.name;
+                document.getElementById('id_target_amount').value = this.dataset.target_amount;
+                document.getElementById('id_current_amount').value = this.dataset.current_amount || 0;
+                document.getElementById('id_target_date').value = this.dataset.target_date;
+                goalIdField.value = this.dataset.id;
+
+                // Update UI
+                formContainer.style.display = 'block';
+                showBtn.style.display = 'none';
+                submitBtn.textContent = 'Update';
+            });
+        });
+
+        // Ensure form is hidden on page load
+        formContainer.style.display = 'none';
+    });
+</script>
+{% endblock %}

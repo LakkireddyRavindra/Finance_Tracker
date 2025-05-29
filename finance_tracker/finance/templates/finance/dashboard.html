@@ -1,0 +1,289 @@
+{% extends 'finance/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    /* General Styles */
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f5f7fa;
+        color: #333;
+        line-height: 1.6;
+    }
+
+    /* Dashboard Header */
+    .dashboard-header {
+        text-align: center;
+        margin: 30px 0;
+    }
+
+    .dashboard-header h2 {
+        font-size: 2.2rem;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    /* Balance Display */
+    .balance-display {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin-top: 10px;
+    }
+
+    .positive-balance {
+        color: #27ae60;
+        /* Rich Green */
+    }
+
+    .negative-balance {
+        color: #c0392b;
+        /* Dark Red */
+    }
+
+    /* Container for top 3 cards */
+    .card-container {
+        display: flex;
+        justify-content: center;
+        gap: 25px;
+        flex-wrap: nowrap;
+        max-width: 1000px;
+        margin: 0 auto 50px auto;
+        padding: 0 20px;
+    }
+
+    /* Container for bottom 2 cards */
+    .goal-section {
+        display: flex;
+        justify-content: center;
+        gap: 30px;
+        max-width: 700px;
+        margin: 0 auto 40px auto;
+        padding: 0 20px;
+        flex-wrap: wrap;
+    }
+
+    /* Card Base */
+    .card {
+        background-color: #ffffff;
+        border-radius: 15px;
+        padding: 25px 30px;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        text-align: center;
+        transition: all 0.3s ease;
+        width: 300px;
+        min-height: 190px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        cursor: default;
+    }
+
+    .card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
+    }
+
+    .card h3 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: #34495e;
+    }
+
+    .card p {
+        font-size: 1.9rem;
+        font-weight: 700;
+        margin: 0 0 10px 0;
+        color: #2c3e50;
+    }
+
+    .card small {
+        color: #7f8c8d;
+        font-weight: 500;
+    }
+
+    /* Top 3 Card Borders and Colors */
+    .card.income {
+        border-top: 5px solid #3498db;
+        /* Bright Blue */
+        background: #eaf4fb;
+    }
+
+    .card.expense {
+        border-top: 5px solid #e74c3c;
+        /* Vivid Red */
+        background: #fdecea;
+    }
+
+    .card.savings {
+        border-top: 5px solid #2ecc71;
+        /* Fresh Green */
+        background: #e6f4ea;
+    }
+
+    /* Bottom 2 Cards */
+    .card.goal {
+        border: 3px solid #9b59b6;
+        /* Purple */
+        background: #f4e9fb;
+        color: #6c3483;
+    }
+
+    .card.progress {
+        border: 3px solid #2980b9;
+        /* Dark Blue */
+        background: #e5f0fb;
+        color: #1c5980;
+    }
+
+    /* Progress Circle Container */
+    .progress-circle {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        margin: 0 auto;
+    }
+
+    /* SVG Container */
+    .progress-circle svg {
+        width: 120px;
+        height: 120px;
+        transform: rotate(-90deg);
+    }
+
+    /* Base circle */
+    .progress-circle svg circle {
+        fill: none;
+        stroke-width: 10;
+        stroke-linecap: round;
+    }
+
+    /* Background circle */
+    .progress-circle svg circle:nth-child(1) {
+        stroke: #dfe6e9;
+    }
+
+    /* Empty overlay circle (optional) */
+    .progress-circle svg circle:nth-child(2) {
+        stroke: #dfe6e9;
+    }
+
+    /* Progress circle */
+    .progress-circle svg circle:nth-child(3) {
+        stroke: #3498db;
+        stroke-dasharray: 283;
+        stroke-dashoffset: 141.5;
+        /* Default midpoint */
+        transition: stroke-dashoffset 0.4s ease;
+    }
+
+    /* Percentage Text */
+    .progress-circle .percentage {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.4rem;
+        font-weight: bold;
+        color: #2980b9;
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 992px) {
+        .card-container {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .card {
+            width: 280px;
+            margin-bottom: 30px;
+        }
+
+        .goal-section {
+            max-width: 100%;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .card {
+            width: 100%;
+            max-width: 350px;
+            margin-bottom: 25px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .progress-circle {
+            width: 100px;
+            height: 100px;
+        }
+
+        .progress-circle svg {
+            width: 100px;
+            height: 100px;
+        }
+    }
+</style>
+
+
+<div class="dashboard-header">
+    <h2>Welcome, {{ user.username }}!</h2>
+    <div
+        class="balance-display {% if account_balance|default:0 >= 0 %}positive-balance{% else %}negative-balance{% endif %}">
+        Current Balance: ₹{{ account_balance|default:0|floatformat:2 }}
+    </div>
+</div>
+<div class="card-container">
+    <div class="card income">
+        <h3>Total Income</h3>
+        <p>₹ {{ total_income|default:0|floatformat:2 }}</p>
+    </div>
+
+    <div class="card expense">
+        <h3>Total Expense</h3>
+        <p>₹ {{ total_expense|default:0|floatformat:2 }}</p>
+    </div>
+
+    <div class="card savings">
+        <h3>Savings</h3>
+        <p>₹ {{ total_savings|default:0|floatformat:2 }}</p>
+        <small>
+            {% if total_savings %}
+            Growing steadily!
+            {% else %}
+            No savings yet
+            {% endif %}
+        </small>
+    </div>
+
+</div>
+
+<div class="goal-section">
+    <div class="card goal">
+        <h3>Savings Goal</h3>
+        <p>Target: ₹{{ total_goal_amount|default:0|floatformat:2 }}</p>
+        <!-- <p>Saved: ₹{{ total_savings|default:0|floatformat:2 }}</p>
+        <small>{{ saving_percentage|default:0|floatformat:0 }}% complete</small> -->
+    </div>
+
+
+    <div class="card progress">
+        <h3>Goal Progress</h3>
+        <div class="progress-circle">
+            <svg>
+                <circle cx="60" cy="60" r="45" />
+                <circle cx="60" cy="60" r="45" />
+                <circle cx="60" cy="60" r="45" style=" stroke-dashoffset: {{ stroke_offset }}; " />
+            </svg>
+            <div class="percentage">{{ saving_percentage|default:0|floatformat:0 }}%</div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

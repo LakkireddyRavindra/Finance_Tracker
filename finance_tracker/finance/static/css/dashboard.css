@@ -1,0 +1,179 @@
+/* General Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #09faea, #1d30ba);
+    color: #333;
+}
+
+/* Navigation Bar */
+.navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #ffffff;
+    padding: 10px 20px;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+    color: #333;
+    text-align: center;
+}
+
+.navbar-nav {
+    margin-left: 20px;
+    gap: 50px;
+}
+
+.nav-link {
+    font-size: 1rem;
+    margin-right: 15px;
+    color: #333;
+    transition: color 0.3s ease-in-out;
+}
+
+.nav-link:hover {
+    color: #007bff;
+}
+
+/* Welcome Header */
+.dashboard-header {
+    text-align: center;
+    margin-top: 90px;
+    color: #fff;
+}
+
+.dashboard-header h2 {
+    font-size: 2.2rem;
+    font-weight: bold;
+}
+
+/* Dashboard Card Sections */
+.dashboard-cards {
+    padding: 20px;
+    margin: 0 auto;
+}
+
+.dashboard-cards.primary {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin: 40px auto;
+    flex-wrap: wrap;
+}
+
+.dashboard-cards.goal-section {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+}
+
+/* Individual Card Styles */
+.card {
+    background-color: #ffffff;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: transform 0.2s ease-in-out;
+    min-width: 220px;
+    flex: 1;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card h3 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.card p {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+}
+
+/* Custom Card Colors */
+.card.income p {
+    color: #28a745;
+}
+
+.card.expense p {
+    color: #dc3545;
+}
+
+.card.savings p {
+    color: #17a2b8;
+}
+
+.card.goal p {
+    color: #ffc107;
+}
+
+.card.progress p {
+    color: #6f42c1;
+}
+
+/* Progress Circle */
+.progress-circle {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto;
+}
+
+.progress-circle svg {
+    width: 100px;
+    height: 100px;
+    transform: rotate(-90deg);
+}
+
+.progress-circle circle {
+    fill: none;
+    stroke-width: 10;
+    stroke: #eee;
+    r: 45;
+    cx: 50;
+    cy: 50;
+}
+
+.progress-circle circle:nth-child(2) {
+    stroke: #6f42c1;
+    stroke-dasharray: 282;
+    stroke-dashoffset: 282;
+    transition: stroke-dashoffset 1s ease-in-out;
+}
+
+.percentage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: bold;
+    font-size: 18px;
+    color: #6f42c1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+
+    .dashboard-cards.primary,
+    .dashboard-cards.goal-section {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .card {
+        width: 80%;
+    }
+}

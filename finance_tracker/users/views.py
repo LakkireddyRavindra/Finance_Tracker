@@ -3,9 +3,12 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from .forms import SignupForm
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+
 
 # User Signup
 def signup_view(request):
+    print("🔹 Signup View Called!")
     if request.method == "POST":  # When form is submitted
         form = SignupForm(request.POST)  # Pass POST data to form
         if form.is_valid():      # Validate all fields
@@ -17,23 +20,19 @@ def signup_view(request):
     return render(request, "users/signup.html", {"form": form})
 
 # User Login
-def login_view(request):
+def user_login(request):
     if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            next_url = request.POST.get('next') or request.GET.get('next') or 'dashboard'
-            return redirect(next_url)
-        else:
-            return render(request, 'users/login.html', {
-                'error': 'Invalid credentials',
-                'next': request.GET.get('next', '')
-            })
-    return render(request, 'users/login.html', {
-        'next': request.GET.get('next', '')
-    })
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('dashboard')  # Redirect to the dashboard in the finance app
+    else:
+        form = AuthenticationForm()
+    return render(request, 'users/login.html', {'form': form})
 
 # User Logout
 def logout_view(request):
@@ -43,9 +42,15 @@ def logout_view(request):
 # User Dashboard (Protected Route)
 @login_required
 def dashboard_view(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
-    return render(request, 'users/dashboard.html', {
+    print("Dashboard view called")
+    print(f"User: {request.user}")
+    return render(request, 'finance/dashboard1.html', {
         'user': request.user,
         'page_title': 'Dashboard'
     })
+
+
+from django.shortcuts import render
+def home(request):
+    return render(request, 'home.html')
+
