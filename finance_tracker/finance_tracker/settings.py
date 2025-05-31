@@ -12,8 +12,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent  # Keep only this BASE_DIR def
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = 'django-insecure-9tg$)yo9hm1!@qk-ij##1f!ja&of1a9&m9u79xtui!o^gs9ewj'
-DEBUG = True
-ALLOWED_HOSTS = ['*']
+DEBUG = True  # Set to False in production
+ALLOWED_HOSTS = []
 
 # Application definition
 INSTALLED_APPS = [
@@ -24,11 +24,11 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "finance",  # Example app
-    "users",
+    "users",  # Keep only this one, remove duplicates
 ]
 
 MIDDLEWARE = [
-    'whitenoise.middleware.WhiteNoiseMiddleware',    # Static Files Configuration
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -40,11 +40,14 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'finance_tracker.urls'
 
+LOGIN_REDIRECT_URL = 'finance:dashboard'  # After login
+LOGOUT_REDIRECT_URL = 'home'  # After logout     # After logout
+LOGIN_URL = 'login'               
 # Templates Configuration
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / "templates"],  # Fixed syntax error (missing comma)
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],  # Fixed syntax error (missing comma)
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -88,17 +91,14 @@ USE_TZ = True
 # Static Files Configuration
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
-    BASE_DIR / "finance" / "static",  # Static files for the finance app
-    BASE_DIR / "users" / "static",    # Static files for the users app
+    BASE_DIR / "users" / "static",  # Ensure Django looks for static files in 'users/static'
 ]
 STATIC_ROOT = BASE_DIR / "staticfiles"  # For collectstatic command
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Authentication
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
+  # Redirect to login after logout
 
 # Custom user model
 AUTH_USER_MODEL = 'users.CustomUser'

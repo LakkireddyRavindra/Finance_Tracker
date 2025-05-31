@@ -1,179 +1,143 @@
 {% extends 'finance/base.html' %}
-{% load static %}
-
-{% block title %}Income{% endblock %}
-
-{% block extra_css %}
-<style>
-    /* Initial state - form hidden */
-    #income-form-container {
-        display: none !important;
-    }
-
-    /* Action buttons */
-    .action-buttons {
-        display: flex;
-        gap: 5px;
-    }
-
-    .action-buttons button {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        margin-right: 5px;
-    }
-
-
-
-    .btn-sm {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-    }
-
-    /* Your existing table styles */
-    table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    th,
-    td {
-        padding: 12px;
-        border: 1px solid #ddd;
-    }
-
-    th {
-        background-color: #f8f9fa;
-    }
-</style>
-{% endblock %}
-
+{% block title %}Income | Finance Tracker{% endblock %}
 {% block content %}
-<h2>Track Your Income</h2>
-<!-- Add Income Button - always visible initially -->
-<button id="show-income-btn" class="btn btn-primary">Add Income</button>
-<br><br>
+<div class="income-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Income Records</h2>
+        <button id="show-income-btn" class="btn btn-primary" {% if editing %}style="display: none;" {% endif %}>
+            Add Income
+        </button>
+    </div>
 
-<!-- Form Container - hidden by default -->
-<div id="income-form-container">
-    <form method="POST" id="income-form">
-        {% csrf_token %}
-        <input type="hidden" id="income-id" name="income_id" value="">
-
-        <div class="form-group">
-            <label for="id_income_type">Income Type:</label>
-            {{ form.income_type }}
-        </div>
-
-        <div class="form-group">
-            <label for="id_amount">Amount (₹):</label>
-            {{ form.amount }}
-        </div>
-
-        <div class="form-group">
-            <label for="id_date_received">Date Received:</label>
-            {{ form.date_received }}
-        </div>
-
-        <div class="form-group">
-            <label for="id_description">Description:</label>
-            {{ form.description }}
-        </div>
-        <br>
-        <button type="submit" class="btn btn-primary" id="submit-btn">Submit</button>
-        <button type="button" id="cancel-btn" class="btn btn-secondary">Cancel</button>
-    </form>
-</div>
-<p>Total incomes: {{ incomes.count|default:"0" }}</p>
-<hr>
-
-<h3>All Income Records</h3>
-<table class="table table-bordered mt-4">
-    <thead class="thead-dark">
-        <tr>
-            <th>Income Type</th>
-            <th>Amount</th>
-            <th>Date Received</th>
-            <th>Description</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for income in incomes %}
-        <tr>
-            <td>{{ income.get_income_type_display }}</td>
-            <td>₹{{ income.amount }}</td>
-            <td>{{ income.date_received|date:"M d, Y" }}</td>
-            <td>{{ income.description|default:"-" }}</td>
-            <td class="action-buttons">
-                <!-- Edit button with pencil icon -->
-                <button class="btn btn-outline-primary btn-sm edit-btn" title="Edit" data-id="{{ income.id }}"
-                    data-type="{{ income.income_type }}" data-amount="{{ income.amount }}"
-                    data-date="{{ income.date_received|date:'Y-m-d' }}" data-description="{{ income.description }}">
-                    <i class="fas fa-pen"></i>
-                </button>
-
-                <!-- Delete button with trash icon -->
-                <form action="{% url 'delete_income' income.id %}" method="POST" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete"
-                        onclick="return confirm('Are you sure you want to delete this income record?')">
-                        <i class="fas fa-trash"></i>
+    <!-- Form Container - shown when editing or when Add Income is clicked -->
+    <div id="income-form-container" class="card mb-4" {% if not editing %}style="display: none;" {% endif %}>
+        <div class="card-body">
+            <h4 class="card-title mb-4">{% if editing %}Edit{% else %}Add New{% endif %} Income</h4>
+            <form method="POST" id="income-form"
+                action="{% if editing %}{% url 'finance:edit_income' edit_id %}{% else %}{% url 'finance:income' %}{% endif %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_income_type" class="form-label">Income Type</label>
+                            {{ form.income_type }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_amount" class="form-label">Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                {{ form.amount }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_date_received" class="form-label">Date Received</label>
+                            {{ form.date_received }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_description" class="form-label">Description</label>
+                            {{ form.description }}
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        {% if editing %}Update{% else %}Submit{% endif %}
                     </button>
-                </form>
-            </td>
+                    <button type="button" id="cancel-income-btn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-        </tr>
-        {% empty %}
-        <tr>
-            <td colspan="5">No income records found.</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Total Income: ₹{{ total_income|floatformat:2 }}</h5>
+        </div>
+    </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const showBtn = document.getElementById('show-income-btn');
-        const formContainer = document.getElementById('income-form-container');
-        const cancelBtn = document.getElementById('cancel-btn');
-        const incomeForm = document.getElementById('income-form');
-        const incomeIdField = document.getElementById('income-id');
-        const submitBtn = document.getElementById('submit-btn');
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for income in incomes %}
+                        <tr>
+                            <td>{{ income.get_income_type_display }}</td>
+                            <td>₹{{ income.amount|floatformat:2 }}</td>
+                            <td>{{ income.date_received|date:"M d, Y" }}</td>
+                            <td>{{ income.description|default:"-"|truncatechars:30 }}</td>
+                            <td>
+                                <div class="d-flex">
+                                    <a href="{% url 'finance:edit_income' income.id %}"
+                                        class="btn btn-sm btn-outline-primary me-2">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form action="{% url 'finance:delete_income' income.id %}" method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Are you sure you want to delete this income record?')">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4">No income records found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="income-form-container" class="{% if editing %}edit-mode{% else %}add-mode{% endif %}"
+    style = "{% if not editing %}display: none;{% endif %}">
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const showBtn = document.getElementById('show-income-btn');
+            const formContainer = document.getElementById('income-form-container');
+            const cancelBtn = document.getElementById('cancel-income-btn');
 
-        // Show form when button is clicked
-        showBtn.addEventListener('click', function () {
-            formContainer.style.display = 'block';
-            this.style.display = 'none';
-            incomeIdField.value = ''; // Clear ID for new entry
-            submitBtn.textContent = 'Submit';
-        });
-
-        // Hide form when cancel is clicked
-        cancelBtn.addEventListener('click', function () {
-            formContainer.style.display = 'none';
-            showBtn.style.display = 'block';
-            incomeForm.reset();
-        });
-
-        // Edit button functionality
-        document.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                // Populate form with existing data
-                document.getElementById('id_income_type').value = this.dataset.type;
-                document.getElementById('id_amount').value = this.dataset.amount;
-                document.getElementById('id_date_received').value = this.dataset.date;
-                document.getElementById('id_description').value = this.dataset.description;
-                incomeIdField.value = this.dataset.id;
-
-                // Update UI
+            // Only add event listeners if we're not in edit mode
+            {% if not editing %}
+            showBtn.addEventListener('click', function () {
                 formContainer.style.display = 'block';
-                showBtn.style.display = 'none';
-                submitBtn.textContent = 'Update';
+                this.style.display = 'none';
             });
-        });
 
-        // Ensure form is hidden on page load
-        formContainer.style.display = 'none';
-    });
-</script>
-{% endblock %}
+            cancelBtn.addEventListener('click', function () {
+                formContainer.style.display = 'none';
+                showBtn.style.display = 'block';
+                document.getElementById('income-form').reset();
+            });
+            {% else %}
+            // In edit mode, make cancel button go back to income list
+            cancelBtn.addEventListener('click', function () {
+                window.location.href = "{% url 'finance:income' %}";
+                formContainer.style.display = 'none';
+                showBtn.style.display = 'block';
+            });
+            {% endif %}
+        });
+    </script>
+    {% endblock %}

@@ -1,289 +1,295 @@
 {% extends 'finance/base.html' %}
 {% load static %}
+{% load finance_filters %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Dashboard | Finance Tracker{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+
+{% endblock %}
 
 {% block content %}
-<style>
-    /* General Styles */
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        margin: 0;
-        padding: 0;
-        background: #f5f7fa;
-        color: #333;
-        line-height: 1.6;
-    }
-
-    /* Dashboard Header */
-    .dashboard-header {
-        text-align: center;
-        margin: 30px 0;
-    }
-
-    .dashboard-header h2 {
-        font-size: 2.2rem;
-        font-weight: 600;
-        color: #2c3e50;
-    }
-
-    /* Balance Display */
-    .balance-display {
-        font-size: 2.2rem;
-        font-weight: 700;
-        margin-top: 10px;
-    }
-
-    .positive-balance {
-        color: #27ae60;
-        /* Rich Green */
-    }
-
-    .negative-balance {
-        color: #c0392b;
-        /* Dark Red */
-    }
-
-    /* Container for top 3 cards */
-    .card-container {
-        display: flex;
-        justify-content: center;
-        gap: 25px;
-        flex-wrap: nowrap;
-        max-width: 1000px;
-        margin: 0 auto 50px auto;
-        padding: 0 20px;
-    }
-
-    /* Container for bottom 2 cards */
-    .goal-section {
-        display: flex;
-        justify-content: center;
-        gap: 30px;
-        max-width: 700px;
-        margin: 0 auto 40px auto;
-        padding: 0 20px;
-        flex-wrap: wrap;
-    }
-
-    /* Card Base */
-    .card {
-        background-color: #ffffff;
-        border-radius: 15px;
-        padding: 25px 30px;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-        text-align: center;
-        transition: all 0.3s ease;
-        width: 300px;
-        min-height: 190px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        cursor: default;
-    }
-
-    .card:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18);
-    }
-
-    .card h3 {
-        font-size: 1.3rem;
-        font-weight: 700;
-        margin-bottom: 20px;
-        color: #34495e;
-    }
-
-    .card p {
-        font-size: 1.9rem;
-        font-weight: 700;
-        margin: 0 0 10px 0;
-        color: #2c3e50;
-    }
-
-    .card small {
-        color: #7f8c8d;
-        font-weight: 500;
-    }
-
-    /* Top 3 Card Borders and Colors */
-    .card.income {
-        border-top: 5px solid #3498db;
-        /* Bright Blue */
-        background: #eaf4fb;
-    }
-
-    .card.expense {
-        border-top: 5px solid #e74c3c;
-        /* Vivid Red */
-        background: #fdecea;
-    }
-
-    .card.savings {
-        border-top: 5px solid #2ecc71;
-        /* Fresh Green */
-        background: #e6f4ea;
-    }
-
-    /* Bottom 2 Cards */
-    .card.goal {
-        border: 3px solid #9b59b6;
-        /* Purple */
-        background: #f4e9fb;
-        color: #6c3483;
-    }
-
-    .card.progress {
-        border: 3px solid #2980b9;
-        /* Dark Blue */
-        background: #e5f0fb;
-        color: #1c5980;
-    }
-
-    /* Progress Circle Container */
-    .progress-circle {
-        position: relative;
-        width: 120px;
-        height: 120px;
-        margin: 0 auto;
-    }
-
-    /* SVG Container */
-    .progress-circle svg {
-        width: 120px;
-        height: 120px;
-        transform: rotate(-90deg);
-    }
-
-    /* Base circle */
-    .progress-circle svg circle {
-        fill: none;
-        stroke-width: 10;
-        stroke-linecap: round;
-    }
-
-    /* Background circle */
-    .progress-circle svg circle:nth-child(1) {
-        stroke: #dfe6e9;
-    }
-
-    /* Empty overlay circle (optional) */
-    .progress-circle svg circle:nth-child(2) {
-        stroke: #dfe6e9;
-    }
-
-    /* Progress circle */
-    .progress-circle svg circle:nth-child(3) {
-        stroke: #3498db;
-        stroke-dasharray: 283;
-        stroke-dashoffset: 141.5;
-        /* Default midpoint */
-        transition: stroke-dashoffset 0.4s ease;
-    }
-
-    /* Percentage Text */
-    .progress-circle .percentage {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 1.4rem;
-        font-weight: bold;
-        color: #2980b9;
-    }
-
-    /* Responsive tweaks */
-    @media (max-width: 992px) {
-        .card-container {
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .card {
-            width: 280px;
-            margin-bottom: 30px;
-        }
-
-        .goal-section {
-            max-width: 100%;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .card {
-            width: 100%;
-            max-width: 350px;
-            margin-bottom: 25px;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .progress-circle {
-            width: 100px;
-            height: 100px;
-        }
-
-        .progress-circle svg {
-            width: 100px;
-            height: 100px;
-        }
-    }
-</style>
-
-
-<div class="dashboard-header">
-    <h2>Welcome, {{ user.username }}!</h2>
-    <div
-        class="balance-display {% if account_balance|default:0 >= 0 %}positive-balance{% else %}negative-balance{% endif %}">
-        Current Balance: ₹{{ account_balance|default:0|floatformat:2 }}
-    </div>
-</div>
-<div class="card-container">
-    <div class="card income">
-        <h3>Total Income</h3>
-        <p>₹ {{ total_income|default:0|floatformat:2 }}</p>
-    </div>
-
-    <div class="card expense">
-        <h3>Total Expense</h3>
-        <p>₹ {{ total_expense|default:0|floatformat:2 }}</p>
-    </div>
-
-    <div class="card savings">
-        <h3>Savings</h3>
-        <p>₹ {{ total_savings|default:0|floatformat:2 }}</p>
-        <small>
-            {% if total_savings %}
-            Growing steadily!
-            {% else %}
-            No savings yet
-            {% endif %}
-        </small>
-    </div>
-
-</div>
-
-<div class="goal-section">
-    <div class="card goal">
-        <h3>Savings Goal</h3>
-        <p>Target: ₹{{ total_goal_amount|default:0|floatformat:2 }}</p>
-        <!-- <p>Saved: ₹{{ total_savings|default:0|floatformat:2 }}</p>
-        <small>{{ saving_percentage|default:0|floatformat:0 }}% complete</small> -->
-    </div>
-
-
-    <div class="card progress">
-        <h3>Goal Progress</h3>
-        <div class="progress-circle">
-            <svg>
-                <circle cx="60" cy="60" r="45" />
-                <circle cx="60" cy="60" r="45" />
-                <circle cx="60" cy="60" r="45" style=" stroke-dashoffset: {{ stroke_offset }}; " />
-            </svg>
-            <div class="percentage">{{ saving_percentage|default:0|floatformat:0 }}%</div>
+<div class="dashboard-container">
+    <!-- Welcome Section -->
+    <div class="dashboard-header mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">Hello, {{ user.username }}!</h1>
+                <p class="lead text-muted">Welcome back to your financial dashboard</p>
+            </div>
+            <div class="text-end">
+                <h3 class="mb-0">Current Balance</h3>
+                <p class="display-6 fw-bold {% if net_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    ₹{{ net_balance|floatformat:2|intcomma }}
+                </p>
+            </div>
         </div>
     </div>
 
-</div>
+    <!-- Financial Overview Cards -->
+    <section class="mb-5">
+        <h2 class="section-title">Financial Overview</h2>
 
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-start border-5 border-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-uppercase text-muted mb-2">Total Income</h6>
+                                <h3 class="mb-0">₹{{ total_income|floatformat:2|intcomma }}</h3>
+                            </div>
+                            <div class="bg-success bg-opacity-10 p-3 rounded">
+                                <i class="fas fa-money-bill-wave text-success fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <a href="{% url 'finance:income' %}" class="btn btn-sm btn-outline-success">View Details</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-start border-5 border-danger">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-uppercase text-muted mb-2">Total Expenses</h6>
+                                <h3 class="mb-0">₹{{ total_expense|floatformat:2|intcomma }}</h3>
+                            </div>
+                            <div class="bg-danger bg-opacity-10 p-3 rounded">
+                                <i class="fas fa-receipt text-danger fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <a href="{% url 'finance:expense' %}" class="btn btn-sm btn-outline-danger">View Details</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-start border-5 border-info">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-uppercase text-muted mb-2">Total Savings</h6>
+                                <h3 class="mb-0">₹{{ total_savings|floatformat:2|intcomma }}</h3>
+                            </div>
+                            <div class="bg-info bg-opacity-10 p-3 rounded">
+                                <i class="fas fa-piggy-bank text-info fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <a href="{% url 'finance:savings' %}" class="btn btn-sm btn-outline-info">View Details</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="card border-start border-5 border-primary">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-uppercase text-muted mb-2">Net Balance</h6>
+                                <h3 class="mb-0 {% if net_balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    ₹{{ net_balance|floatformat:2|intcomma }}
+                                </h3>
+                            </div>
+                            <div class="bg-primary bg-opacity-10 p-3 rounded">
+                                <i class="fas fa-wallet text-primary fs-4"></i>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <a href="{% url 'finance:transactions' %}" class="btn btn-sm btn-outline-primary">View
+                                Details</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Transactions Section -->
+    <section class="mb-5">
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Recent Incomes</h5>
+                        <a href="{% url 'finance:income' %}" class="btn btn-sm btn-outline-success">View All</a>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_incomes %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Type</th>
+                                        <th>Amount</th>
+                                        <th>Date</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for income in recent_incomes %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-success bg-opacity-10 p-2 rounded me-2">
+                                                    <i class="fas fa-money-bill-wave text-success"></i>
+                                                </div>
+                                                <span>{{ income.get_income_type_display }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="fw-bold">₹{{ income.amount|floatformat:2|intcomma }}</td>
+                                        <td>{{ income.date_received|date:"M d, Y" }}</td>
+                                        <td class="text-end">
+                                            <a href="#" class="btn btn-sm btn-outline-secondary" title="View Details">
+                                                <i class="fas fa-ellipsis-h"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-money-bill-wave fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No recent incomes found</p>
+                            <a href="{% url 'finance:income' %}" class="btn btn-success">Add Income</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Recent Expenses</h5>
+                        <a href="{% url 'finance:expense' %}" class="btn btn-sm btn-outline-danger">View All</a>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_expenses %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Date</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for expense in recent_expenses %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-danger bg-opacity-10 p-2 rounded me-2">
+                                                    <i class="fas fa-receipt text-danger"></i>
+                                                </div>
+                                                <span>{{ expense.get_expense_type_display }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="fw-bold">₹{{ expense.amount|floatformat:2|intcomma }}</td>
+                                        <td>{{ expense.date_incurred|date:"M d, Y" }}</td>
+                                        <td class="text-end">
+                                            <a href="#" class="btn btn-sm btn-outline-secondary" title="View Details">
+                                                <i class="fas fa-ellipsis-h"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No recent expenses found</p>
+                            <a href="{% url 'finance:expense' %}" class="btn btn-danger">Add Expense</a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Savings Goals Section -->
+    <section>
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Savings Goals Progress</h5>
+                <a href="{% url 'finance:savings' %}" class="btn btn-sm btn-outline-primary">Manage Goals</a>
+            </div>
+            <div class="card-body">
+                {% if savings_goals %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Goal</th>
+                                <th>Target</th>
+                                <th>Saved</th>
+                                <th>Progress</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for goal in savings_goals %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-primary bg-opacity-10 p-2 rounded me-2">
+                                            <i class="fas fa-bullseye text-primary"></i>
+                                        </div>
+                                        <span>{{ goal.goal_name }}</span>
+                                    </div>
+                                </td>
+                                <td>₹{{ goal.target_amount|floatformat:2|intcomma }}</td>
+                                <td>₹{{ goal.current_amount|floatformat:2|intcomma }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                            <div class="progress-bar 
+                                                {% if goal.progress_percentage >= 100 %}bg-success
+                                                {% else %}bg-primary{% endif %}" role="progressbar"
+                                                style="width: {{ goal.progress_percentage }}%"
+                                                aria-valuenow="{{ goal.progress_percentage }}" aria-valuemin="0"
+                                                aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                        <span class="text-nowrap">{{ goal.progress_percentage|floatformat:1 }}%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if goal.progress_percentage >= 100 %}
+                                    <span class="badge bg-success">Achieved</span>
+                                    {% else %}
+                                    <span class="badge bg-primary">In Progress</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-piggy-bank fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No savings goals found</p>
+                    <a href="{% url 'finance:savings' %}" class="btn btn-primary">Create Goal</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+</div>
 {% endblock %}

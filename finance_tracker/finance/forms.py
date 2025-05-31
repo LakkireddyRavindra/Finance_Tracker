@@ -1,110 +1,142 @@
 from django import forms
 from .models import Income, Expense, SavingsGoal
-
-# Choices could be moved to models.py and referenced as ModelName.CHOICES
-INCOME_CHOICES = [
-    ('salary', 'Salary'),
-    ('business', 'Business'),
-    ('freelance', 'Freelance'),
-    ('investment', 'Investment'),
-    ('other', 'Other')
-]
-
-EXPENSE_CHOICES = [
-    ('housing', 'Housing'),
-    ('food', 'Food'),
-    ('transportation', 'Transportation'),
-    ('utilities', 'Utilities'),
-    ('entertainment', 'Entertainment'),
-    ('other', 'Other')
-]
+from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 class IncomeForm(forms.ModelForm):
     class Meta:
         model = Income
         fields = ['income_type', 'amount', 'date_received', 'description']
         widgets = {
-            'income_type': forms.Select(attrs={
-                'class': 'form-control income-type-field',
-                'style': 'background-color: #f8f9fa; border-radius: 4px;'
+            'date_received': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control',
+                'max': timezone.now().date()
             }),
             'amount': forms.NumberInput(attrs={
-                'class': 'form-control amount-field',
-                'placeholder': '0.00'
-            }),
-            'date_received': forms.DateInput(attrs={
-                'class': 'form-control date-field',
-                'type': 'date'
+                'class': 'form-control',
+                'min': 0.01,
+                'step': '0.01'
             }),
             'description': forms.Textarea(attrs={
-                'class': 'form-control description-field',
-                'rows': 3,
-                'placeholder': 'Enter description...'
+                'class': 'form-control',
+                'rows': 3
             }),
         }
+        labels = {
+            'income_type': 'Income Type',
+            'date_received': 'Date Received'
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['income_type'].widget.attrs.update({'class': 'form-select'})
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get('amount')
+        if amount <= 0:
+            raise ValidationError("Amount must be greater than zero")
+        return amount
 
 class ExpenseForm(forms.ModelForm):
     class Meta:
         model = Expense
-        fields = ['expense_type', 'amount', 'date_incurred', 'description']
+        fields = ['expense_type', 'amount', 'date_incurred', 'source', 'description']
         widgets = {
-            'expense_type': forms.Select(attrs={
-                'class': 'form-control expense-type-field',
-                'style': 'background-color: #f8f9fa; border-radius: 4px;'
+            'date_incurred': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control',
+                'max': timezone.now().date()
             }),
             'amount': forms.NumberInput(attrs={
-                'class': 'form-control amount-field',
-                'placeholder': '0.00'
-            }),
-            'date_incurred': forms.DateInput(attrs={
-                'class': 'form-control date-field',
-                'type': 'date'
+                'class': 'form-control',
+                'min': 0.01,
+                'step': '0.01'
             }),
             'description': forms.Textarea(attrs={
-                'class': 'form-control description-field',
-                'rows': 3,
-                'placeholder': 'Enter description...'
+                'class': 'form-control',
+                'rows': 3
             }),
         }
+        labels = {
+            'expense_type': 'Expense Category',
+            'date_incurred': 'Date Incurred'
+        }
 
-# finance/forms.py
-from django import forms
-from .models import SavingsGoal
-import datetime
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['expense_type'].widget.attrs.update({'class': 'form-select'})
+        self.fields['source'].widget.attrs.update({'class': 'form-select'})
+
+    def clean_amount(self):
+        amount = self.cleaned_data.get('amount')
+        if amount <= 0:
+            raise ValidationError("Amount must be greater than zero")
+        return amount
 
 class SavingsGoalForm(forms.ModelForm):
     class Meta:
         model = SavingsGoal
-        fields = ['goal_name', 'target_amount', 'current_amount', 'target_date']
+        fields = ['goal_name', 'target_amount', 'current_amount', 'target_date', 'description']
         widgets = {
-            'goal_name': forms.TextInput(attrs={
+            'target_date': forms.DateInput(attrs={
+                'type': 'date',
                 'class': 'form-control',
-                'placeholder': 'Enter goal name...'
+                'min': timezone.now().date()
             }),
             'target_amount': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'placeholder': '0.00'
+                'min': 0.01,
+                'step': '0.01'
             }),
             'current_amount': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'placeholder': '0.00'
+                'min': 0,
+                'step': '0.01'
             }),
-            'target_date': forms.DateInput(attrs={
+            'description': forms.Textarea(attrs={
                 'class': 'form-control',
-                'type': 'date'
+                'rows': 3
             }),
         }
-    
+        labels = {
+            'goal_name': 'Goal Name',
+            'target_amount': 'Target Amount (₹)',
+            'current_amount': 'Currently Saved (₹)',
+            'target_date': 'Target Date'
+        }
+
     def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        if self.instance.pk is None:  # Only for new instances
-            self.initial['current_amount'] = 0  # Set default current amount
-    
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        if not instance.pk:  # If this is a new instance
-            instance.user = self.user
-        if commit:
-            instance.save()
-        return instance
+        self.fields['goal_name'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'e.g. Vacation Fund, New Car'
+        })
+
+    def clean(self):
+        cleaned_data = super().clean()
+        target_amount = cleaned_data.get('target_amount')
+        current_amount = cleaned_data.get('current_amount')
+        target_date = cleaned_data.get('target_date')
+
+        if target_amount and current_amount and current_amount > target_amount:
+            self.add_error('current_amount', 
+                          "Current amount cannot exceed target amount")
+
+        if target_date and target_date < timezone.now().date():
+            self.add_error('target_date', 
+                          "Target date cannot be in the past")
+
+        return cleaned_data
+
+    def clean_target_amount(self):
+        target_amount = self.cleaned_data.get('target_amount')
+        if target_amount <= 0:
+            raise ValidationError("Target amount must be greater than zero")
+        return target_amount
+
+    def clean_current_amount(self):
+        current_amount = self.cleaned_data.get('current_amount')
+        if current_amount < 0:
+            raise ValidationError("Current amount cannot be negative")
+        return current_amount

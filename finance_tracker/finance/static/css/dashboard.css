@@ -1,179 +1,105 @@
-/* General Styles */
-body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    background: linear-gradient(135deg, #09faea, #1d30ba);
-    color: #333;
+/* DASHBOARD-SPECIFIC STYLES ONLY */
+.dashboard-container {
+    background-color: white;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--box-shadow-sm);
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
 }
 
-/* Navigation Bar */
-.navbar {
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 1000;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    background-color: #ffffff;
-    padding: 10px 20px;
+.dashboard-header h1 {
+    font-weight: 700;
+    color: var(--primary-color);
 }
 
-.navbar-brand {
-    font-weight: bold;
-    font-size: 1.5rem;
-    color: #333;
-    text-align: center;
+/* Dashboard Card Styles */
+.dashboard-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    margin-bottom: var(--spacing-md);
 }
 
-.navbar-nav {
-    margin-left: 20px;
-    gap: 50px;
-}
-
-.nav-link {
-    font-size: 1rem;
-    margin-right: 15px;
-    color: #333;
-    transition: color 0.3s ease-in-out;
-}
-
-.nav-link:hover {
-    color: #007bff;
-}
-
-/* Welcome Header */
-.dashboard-header {
-    text-align: center;
-    margin-top: 90px;
-    color: #fff;
-}
-
-.dashboard-header h2 {
-    font-size: 2.2rem;
-    font-weight: bold;
-}
-
-/* Dashboard Card Sections */
-.dashboard-cards {
-    padding: 20px;
-    margin: 0 auto;
-}
-
-.dashboard-cards.primary {
-    display: flex;
-    justify-content: center;
-    gap: 30px;
-    margin: 40px auto;
-    flex-wrap: wrap;
-}
-
-.dashboard-cards.goal-section {
-    display: flex;
-    justify-content: center;
-    gap: 30px;
-    flex-wrap: wrap;
-    margin-bottom: 40px;
-}
-
-/* Individual Card Styles */
-.card {
-    background-color: #ffffff;
-    border-radius: 15px;
-    padding: 20px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    transition: transform 0.2s ease-in-out;
-    min-width: 220px;
-    flex: 1;
-}
-
-.card:hover {
+.dashboard-card:hover {
     transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
-.card h3 {
-    font-size: 18px;
-    color: #333;
-    margin-bottom: 10px;
-}
-
-.card p {
-    font-size: 24px;
-    font-weight: bold;
-    margin: 0;
-}
-
-/* Custom Card Colors */
-.card.income p {
-    color: #28a745;
-}
-
-.card.expense p {
-    color: #dc3545;
-}
-
-.card.savings p {
-    color: #17a2b8;
-}
-
-.card.goal p {
-    color: #ffc107;
-}
-
-.card.progress p {
-    color: #6f42c1;
-}
-
-/* Progress Circle */
-.progress-circle {
+/* Section Titles */
+.section-title {
     position: relative;
-    width: 100px;
-    height: 100px;
-    margin: 0 auto;
+    padding-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
 }
 
-.progress-circle svg {
-    width: 100px;
-    height: 100px;
-    transform: rotate(-90deg);
-}
-
-.progress-circle circle {
-    fill: none;
-    stroke-width: 10;
-    stroke: #eee;
-    r: 45;
-    cx: 50;
-    cy: 50;
-}
-
-.progress-circle circle:nth-child(2) {
-    stroke: #6f42c1;
-    stroke-dasharray: 282;
-    stroke-dashoffset: 282;
-    transition: stroke-dashoffset 1s ease-in-out;
-}
-
-.percentage {
+.section-title:after {
+    content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-weight: bold;
-    font-size: 18px;
-    color: #6f42c1;
+    bottom: 0;
+    left: 0;
+    width: 50px;
+    height: 3px;
+    background-color: var(--primary-color);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* Empty State Styles */
+.empty-state {
+    padding: 3rem 0;
+    text-align: center;
+}
 
-    .dashboard-cards.primary,
-    .dashboard-cards.goal-section {
-        flex-direction: column;
-        align-items: center;
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+/* Dashboard Animations */
+@keyframes dashboardFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
     }
 
-    .card {
-        width: 80%;
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-card {
+    animation: dashboardFadeIn 0.5s ease forwards;
+}
+
+/* Staggered animations for cards */
+.dashboard-card:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.dashboard-card:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.dashboard-card:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.dashboard-card:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+/* Responsive Adjustments for Dashboard Only */
+@media (max-width: 992px) {
+    .dashboard-container {
+        padding: var(--spacing-lg);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .dashboard-header .display-6 {
+        font-size: 2rem;
     }
 }

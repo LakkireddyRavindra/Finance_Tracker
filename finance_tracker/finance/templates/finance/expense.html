@@ -1,0 +1,145 @@
+{% extends 'finance/base.html' %}
+{% block title %} Expense | Finance Tracker{% endblock %}
+{% block content %}
+<div class="expense-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Expense Records</h2>
+        <button id="show-expense-btn" class="btn btn-primary" {% if editing %}style="display: none;" {% endif %}>
+            Add Expense
+        </button>
+    </div>
+
+    <!-- Form Container - shown when editing or when Add is clicked -->
+    <div id="expense-form-container" class="card mb-4" {% if not editing %}style="display: none;" {% endif %}>
+        <div class="card-body">
+            <h4 class="card-title mb-4">{% if editing %}Edit{% else %}Add New{% endif %} Expense</h4>
+            <form method="POST" id="expense-form"
+                action="{% if editing %}{% url 'finance:edit_expense' edit_id %}{% else %}{% url 'finance:expense' %}{% endif %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_expense_type" class="form-label">Expense Type</label>
+                            {{ form.expense_type }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_amount" class="form-label">Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₹</span>
+                                {{ form.amount }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_date_incurred" class="form-label">Date Incurred</label>
+                            {{ form.date_incurred }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="id_source" class="form-label">Source</label>
+                            {{ form.source }}
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="id_description" class="form-label">Description</label>
+                    {{ form.description }}
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        {% if editing %}Update{% else %}Submit{% endif %}
+                    </button>
+                    <button type="button" id="cancel-expense-btn" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Total Expenses: ₹{{ total_expense|floatformat:2 }}</h5>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Source</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in expenses %}
+                        <tr>
+                            <td>{{ expense.get_expense_type_display }}</td>
+                            <td>₹{{ expense.amount|floatformat:2 }}</td>
+                            <td>{{ expense.date_incurred|date:"M d, Y" }}</td>
+                            <td>{{ expense.get_source_display }}</td>
+                            <td>{{ expense.description|default:"-"|truncatechars:20 }}</td>
+                            <td>
+                                <div class="d-flex">
+                                    <a href="{% url 'finance:edit_expense' expense.id %}"
+                                        class="btn btn-sm btn-outline-primary me-2">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form action="{% url 'finance:delete_expense' expense.id %}" method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Are you sure you want to delete this expense record?')">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">No expense records found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const showBtn = document.getElementById('show-expense-btn');
+        const formContainer = document.getElementById('expense-form-container');
+        const cancelBtn = document.getElementById('cancel-expense-btn');
+
+        {% if not editing %}
+        showBtn.addEventListener('click', function () {
+            formContainer.style.display = 'block';
+            this.style.display = 'none';
+        });
+
+        cancelBtn.addEventListener('click', function () {
+            formContainer.style.display = 'none';
+            showBtn.style.display = 'block';
+            document.getElementById('expense-form').reset();
+        });
+        {% else %}
+        cancelBtn.addEventListener('click', function () {
+            window.location.href = "{% url 'finance:expense' %}";
+        });
+        {% endif %}
+    });
+</script>
+
+{% endblock %}
