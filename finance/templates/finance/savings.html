@@ -1,0 +1,435 @@
+{% extends 'finance/base.html' %}
+{% block title %}Savings | Finance Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .viz-controls {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: none;
+    }
+
+    .chart-container {
+        height: 500px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        display: none;
+    }
+
+    .chart-btn {
+        font-size: 1rem;
+        padding: 0.5rem 1.25rem;
+        transition: all 0.2s;
+    }
+
+    .chart-btn i {
+        margin-right: 8px;
+    }
+
+    .chart-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-select {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+    }
+
+    .input-group-text {
+        background: #e9ecef;
+        font-weight: 500;
+    }
+
+    #savingsChart {
+        width: 100% !important;
+        height: 100% !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="savings-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Savings Goals</h2>
+        {% if not editing %}
+        <button id="show-savings-btn" class="btn btn-primary">Add / Update Savings</button>
+        {% endif %}
+    </div>
+
+    <div id="savings-form-container" class="card mb-4" {% if not editing %}style="display: none;" {% endif %}>
+        <div class="card-body">
+            <h4 class="card-title mb-4">Add to Existing or Create New Goal</h4>
+            <form method="POST" id="savings-form"
+                action="{% if editing %}{% url 'finance:edit_savings' goal_to_edit.id %}{% else %}{% url 'finance:savings' %}{% endif %}">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label for="{{ form.existing_goal.id_for_label }}" class="form-label">Select Existing Goal</label>
+                    {{ form.existing_goal }}
+                    <small class="text-muted">Or leave blank to create new goal</small>
+                </div>
+
+                <div id="new-goal-fields">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.goal_name.id_for_label }}" class="form-label">New Goal Name</label>
+                            {{ form.goal_name }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.target_date.id_for_label }}" class="form-label">Target Date</label>
+                            {{ form.target_date }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.target_amount.id_for_label }}" class="form-label">Target Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            {{ form.target_amount }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ form.amount_to_add.id_for_label }}" class="form-label">Amount to Add</label>
+                    <div class="input-group">
+                        <span class="input-group-text">₹</span>
+                        {{ form.amount_to_add }}
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary me-2">Save</button>
+                    {% if editing %}
+                    <a href="{% url 'finance:savings' %}" class="btn btn-secondary">Cancel</a>
+                    {% else %}
+                    <button type="button" id="cancel-savings-btn" class="btn btn-secondary">Cancel</button>
+                    {% endif %}
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Target</h5>
+                    <p class="card-text">₹{{ total_target|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Saved</h5>
+                    <p class="card-text">₹{{ total_saved|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Remaining</h5>
+                    <p class="card-text">₹{{ remaining_amount|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="visualize-buttons" class="mb-4 d-flex justify-content-end gap-2">
+        <button id="toggle-chart-btn" class="btn btn-primary chart-btn">
+            <i class="fas fa-chart-bar"></i> Visualize
+        </button>
+        <a href="{% url 'finance:download_savings' %}" class="btn btn-success chart-btn">
+            <i class="fas fa-file-download"></i> Export Data
+        </a>
+    </div>
+
+    <div id="chart-controls" class="viz-controls">
+        <div class="row align-items-center">
+            <div class="col-md-4 mb-3 mb-md-0">
+                <div class="input-group">
+                    <span class="input-group-text">Chart Type</span>
+                    <select id="chart-type" class="form-select">
+                        <option value="bar">Bar Chart</option>
+                        <option value="pie">Pie Chart</option>
+                        <option value="doughnut">Doughnut Chart</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3 mb-md-0">
+                <div class="input-group">
+                    <span class="input-group-text">Period (Goals Created)</span>
+                    <select id="time-period" class="form-select">
+                        <option value="all">All Time</option>
+                        <option value="1">1 Month</option>
+                        <option value="3">3 Months</option>
+                        <option value="6">6 Months</option>
+                        <option value="12">1 Year</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button id="update-chart-btn" class="btn btn-primary chart-btn me-2">
+                    <i class="fas fa-sync-alt"></i> Update
+                </button>
+                <button id="hide-chart-btn" class="btn btn-secondary chart-btn">
+                    <i class="fas fa-times"></i> Hide
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="chart-container" class="chart-container">
+        <canvas id="savingsChart"></canvas>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Goal</th>
+                            <th>Target</th>
+                            <th>Saved</th>
+                            <th>Progress %</th>
+                            <th>Current Date</th>
+                            <th>Target Date</th>
+                            <th>Remaining Days</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for goal in goals %}
+                        <tr>
+                            <td>{{ goal.goal_name }}</td>
+                            <td>₹{{ goal.target_amount|floatformat:2 }}</td>
+                            <td>₹{{ goal.current_amount|floatformat:2 }}</td>
+                            <td>
+                                <div class="progress">
+                                    <div class="progress-bar"
+                                        style="width: {{ goal.progress_percentage|default:0|floatformat:1 }}%;">
+                                        {{ goal.progress_percentage|default:0|floatformat:1 }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ goal.created_at|date:"M d, Y" }}</td>
+                            <td>{{ goal.target_date|date:"M d, Y" }}</td>
+                            <td>{{ goal.days_remaining|floatformat:0 }} days left</td>
+                            <td>
+                                <div class="d-flex">
+                                    <a href="{% url 'finance:edit_savings' goal.id %}"
+                                        class="btn btn-sm btn-outline-primary me-2">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form action="{% url 'finance:delete_savings' goal.id %}" method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Delete this goal?')">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4">No savings goals found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const savingsDataByPeriod = {
+        "all": JSON.parse('{{ savings_totals_all_json|escapejs }}'),
+        "1": JSON.parse('{{ savings_totals_1m_json|escapejs }}'),
+        "3": JSON.parse('{{ savings_totals_3m_json|escapejs }}'),
+        "6": JSON.parse('{{ savings_totals_6m_json|escapejs }}'),
+        "12": JSON.parse('{{ savings_totals_12m_json|escapejs }}')
+    };
+    const savingsGoalNames = JSON.parse('{{ goal_names_json|escapejs }}');
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const showBtn = document.getElementById('show-savings-btn');
+        const formContainer = document.getElementById('savings-form-container');
+        const cancelBtn = document.getElementById('cancel-savings-btn');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => {
+                formContainer.style.display = 'none';
+                showBtn.style.display = 'block';
+                document.getElementById('savings-form').reset();
+                newGoalFields.style.display = 'block';
+                if (existingGoalSelect) {
+                    existingGoalSelect.value = '';
+                }
+            });
+        }
+
+        const existingGoalSelect = document.getElementById('{{ form.existing_goal.id_for_label }}');
+        const newGoalFields = document.getElementById('new-goal-fields');
+
+        // New chart-related elements
+        const toggleChartBtn = document.getElementById('toggle-chart-btn');
+        const chartControls = document.getElementById('chart-controls');
+        const chartContainer = document.getElementById('chart-container');
+        const hideChartBtn = document.getElementById('hide-chart-btn');
+        const typeSelect = document.getElementById('chart-type');
+        const periodSelect = document.getElementById('time-period');
+        const updateBtn = document.getElementById('update-chart-btn');
+        const visualizeButtons = document.getElementById('visualize-buttons');
+
+        let savingsChart = null; // Variable to hold our Chart.js instance
+
+        // --- Existing form toggling logic (unchanged) ---
+        showBtn.addEventListener('click', () => {
+            formContainer.style.display = 'block';
+            showBtn.style.display = 'none';
+        });
+
+        cancelBtn.addEventListener('click', () => {
+            formContainer.style.display = 'none';
+            showBtn.style.display = 'block';
+            document.getElementById('savings-form').reset();
+            // Ensure new goal fields are visible if existing goal was selected and then canceled
+            newGoalFields.style.display = 'block';
+            if (existingGoalSelect) {
+                existingGoalSelect.value = ''; // Reset dropdown
+            }
+        });
+
+        if (existingGoalSelect) {
+            existingGoalSelect.addEventListener('change', () => {
+                if (existingGoalSelect.value) {
+                    newGoalFields.style.display = 'none';
+                } else {
+                    newGoalFields.style.display = 'block';
+                }
+            });
+        }
+
+        // --- Chart Visualization Logic (added/modified) ---
+
+        toggleChartBtn.addEventListener('click', () => {
+            chartControls.style.display = 'block';
+            chartContainer.style.display = 'block';
+            visualizeButtons.style.display = 'none'; // Hide "Visualize" and "Export" buttons
+            renderSavingsChart(); // Render the chart when "Visualize" is clicked
+        });
+
+        hideChartBtn.addEventListener('click', () => {
+            chartControls.style.display = 'none';
+            chartContainer.style.display = 'none';
+            visualizeButtons.style.display = 'flex'; // Show them back
+        });
+
+        updateBtn.addEventListener('click', renderSavingsChart);
+        typeSelect.addEventListener('change', renderSavingsChart);
+        periodSelect.addEventListener('change', renderSavingsChart);
+
+        function renderSavingsChart() {
+            if (savingsChart) savingsChart.destroy(); // Destroy previous chart instance
+
+            const ctx = document.getElementById('savingsChart').getContext('2d');
+            const type = typeSelect.value;
+            const period = periodSelect.value;
+
+            // Get data for the selected period from the preloaded data
+            const dataForChart = savingsDataByPeriod[period];
+
+            // If the data for the selected period is all zeros (e.g., no goals created in that period),
+            // you might want to display a message or revert to "All Time" data.
+            // For now, it will just render an empty chart for clarity on the data source.
+
+            savingsChart = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: savingsGoalNames, // Goal names are labels
+                    datasets: [{
+                        label: `Saved Amount (${period === 'all' ? 'All Time' : period + ' Month' + (parseInt(period) > 1 ? 's' : '')})`,
+                        data: dataForChart,
+                        backgroundColor: [
+                            '#4e73df', // Blue
+                            '#1cc88a', // Green
+                            '#36b9cc', // Cyan
+                            '#f6c23e', // Yellow
+                            '#e74a3b', // Red
+                            '#858796', // Gray
+                            '#fd7e14', // Orange
+                            '#6f42c1', // Purple
+                            '#20c997', // Teal
+                            '#e83e8c', // Pink
+                            // Add more colors if you expect many goals
+                        ],
+                        borderColor: [
+                            '#4e73df',
+                            '#1cc88a',
+                            '#36b9cc',
+                            '#f6c23e',
+                            '#e74a3b',
+                            '#858796',
+                            '#fd7e14',
+                            '#6f42c1',
+                            '#20c997',
+                            '#e83e8c',
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label = context.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== undefined) {
+                                        label += '₹' + context.parsed.y.toLocaleString();
+                                    } else { // For pie/doughnut charts, context.parsed.y might be undefined
+                                        label += '₹' + context.raw.toLocaleString();
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: (type !== 'pie' && type !== 'doughnut') ? {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function (value) {
+                                    return '₹' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    } : {} // No scales for pie/doughnut charts
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

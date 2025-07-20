@@ -1,0 +1,16 @@
+<!-- error.html -->
+{% extends 'finance/base.html' %}
+{% block title %}Error | Finance Tracker{% endblock %}
+{% block content %}
+<div class="container mt-5">
+    <div class="alert alert-danger">
+        <h4 class="alert-heading">Error</h4>
+        <p>{{ error_message }}</p>
+        {% if error_details %}
+        <hr>
+        <p class="mb-0"><small>Technical details: {{ error_details }}</small></p>
+        {% endif %}
+    </div>
+    <a href=" {% url 'finance:dashboard' %}" class="btn btn-primary">Return to Dashboard</a>
+</div>
+{% endblock %}

@@ -1,22 +1,24 @@
-# Create your views here.
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from .forms import SignupForm
 
-# User Signup
+from django.shortcuts import render
+
+def home_view(request):
+    return render(request, 'users/home.html')
+
 def signup_view(request):
-    if request.method == "POST":  # When form is submitted
-        form = SignupForm(request.POST)  # Pass POST data to form
-        if form.is_valid():      # Validate all fields
-            user = form.save()    # Save data to database
-            login(request, user)  # Log user in
-            return redirect("dashboard")  # Redirect to dashboard
+    if request.method == "POST":
+        form = SignupForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('finance:dashboard')  # Redirect to finance dashboard
     else:
-        form = SignupForm()  # Display empty form
+        form = SignupForm()
     return render(request, "users/signup.html", {"form": form})
 
-# User Login
 def login_view(request):
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -24,31 +26,27 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            next_url = request.POST.get('next') or request.GET.get('next') or 'dashboard'
+            next_url = request.POST.get('next') or 'finance:dashboard'  # Default to finance dashboard
             return redirect(next_url)
         else:
             return render(request, 'users/login.html', {
                 'error': 'Invalid credentials',
-                'next': request.GET.get('next', '')
+                'next': request.GET.get('next', 'finance:dashboard')  # Default to finance dashboard
             })
     return render(request, 'users/login.html', {
-        'next': request.GET.get('next', '')
+        'next': request.GET.get('next', 'finance:dashboard')  # Default to finance dashboard
     })
 
-# User Logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 def logout_view(request):
     logout(request)
-    return redirect("login")
+    return redirect("home")  # Redirect to home after logout
 
-# User Dashboard (Protected Route)
 @login_required
 def dashboard_view(request):
-    if not request.user.is_authenticated:
-        return redirect('login')
+    """Dashboard view - decide if you want to keep this or use finance dashboard"""
     return render(request, 'users/dashboard.html', {
         'user': request.user,
         'page_title': 'Dashboard'
     })
-from django.utils.timezone import now
-def my_view(request):
-    return render(request, "users/signup.html", {"timestamp": now().timestamp()})

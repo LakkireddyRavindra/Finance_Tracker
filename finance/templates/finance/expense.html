@@ -1,0 +1,273 @@
+{% extends 'finance/base.html' %}
+{% block title %}Expense | Finance Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .viz-controls {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        display: none;
+    }
+    .chart-container {
+        height: 500px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        display: none;
+    }
+    .chart-btn { font-size: 1rem; padding: 0.5rem 1.25rem; transition: all 0.2s; }
+    .chart-btn i { margin-right: 8px; }
+    .chart-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    .form-select { font-size: 1rem; padding: 0.5rem 1rem; }
+    .input-group-text { background: #e9ecef; font-weight: 500; }
+    #expenseChart { width: 100% !important; height: 100% !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="expense-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Expense Records</h2>
+        {% if not editing %}
+        <button id="add-expense-btn" class="btn btn-primary">Add Expense</button>
+        {% endif %}
+    </div>
+
+    <!-- Form -->
+    <div id="expense-form-container" class="card mb-4" {% if not editing %}style="display: none;"{% endif %}>
+        <div class="card-body">
+            <h4 class="card-title mb-4">{% if editing %}Edit{% else %}Add New{% endif %} Expense</h4>
+            <form method="POST"
+                action="{% if editing %}{% url 'finance:edit_expense' edit_id %}{% else %}{% url 'finance:expense' %}{% endif %}">
+                {% csrf_token %}
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Expense Type</label>
+                        {{ form.expense_type }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            {{ form.amount }}
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Date Incurred</label>
+                        {{ form.date_incurred }}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Source</label>
+                        {{ form.source }}
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    {{ form.description }}
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary me-2">{% if editing %}Update{% else %}Submit{% endif %}</button>
+                    <button type="button" id="{% if editing %}cancel-edit-btn{% else %}cancel-add-btn{% endif %}" class="btn btn-secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Total -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Total Expenses: ₹{{ total_expense|floatformat:2 }}</h5>
+        </div>
+    </div>
+
+    <!-- Buttons -->
+    <div id="visualize-buttons" class="mb-4 d-flex justify-content-end gap-2">
+        <button id="toggle-chart-btn" class="btn btn-primary chart-btn">
+            <i class="fas fa-chart-bar"></i> Visualize
+        </button>
+        <a href="{% url 'finance:download_expenses' %}" class="btn btn-success chart-btn">
+            <i class="fas fa-file-download"></i> Export Data
+        </a>
+    </div>
+
+    <!-- Chart controls -->
+    <div id="chart-controls" class="viz-controls">
+        <div class="row align-items-center">
+            <div class="col-md-4 mb-3 mb-md-0">
+                <div class="input-group">
+                    <span class="input-group-text">Chart Type</span>
+                    <select id="chart-type" class="form-select">
+                        <option value="bar">Bar Chart</option>
+                        <option value="pie">Pie Chart</option>
+                        <option value="doughnut">Doughnut Chart</option>
+                        <option value="line">Trend Line</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3 mb-md-0">
+                <div class="input-group">
+                    <span class="input-group-text">Period</span>
+                    <select id="time-period" class="form-select">
+                        <option value="1">1 Month</option>
+                        <option value="3">3 Months</option>
+                        <option value="6">6 Months</option>
+                        <option value="12">1 Year</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <button id="update-chart-btn" class="btn btn-primary chart-btn me-2">
+                    <i class="fas fa-sync-alt"></i> Update
+                </button>
+                <button id="hide-chart-btn" class="btn btn-secondary chart-btn">
+                    <i class="fas fa-times"></i> Hide
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div id="chart-container" class="chart-container">
+        <canvas id="expenseChart"></canvas>
+    </div>
+
+    <!-- Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Category</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Source</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for expense in expenses %}
+                        <tr>
+                            <td>{{ expense.get_expense_type_display }}</td>
+                            <td>₹{{ expense.amount|floatformat:2 }}</td>
+                            <td>{{ expense.date_incurred|date:"M d, Y" }}</td>
+                            <td>{{ expense.get_source_display }}</td>
+                            <td>{{ expense.description|default:"-"|truncatechars:30 }}</td>
+                            <td>
+                                <div class="d-flex">
+                                    <a href="{% url 'finance:edit_expense' expense.id %}" class="btn btn-sm btn-outline-primary me-2">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <form action="{% url 'finance:delete_expense' expense.id %}" method="post">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure?')">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center py-4">No expense records found</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const expenseDataByPeriod = {
+        "1": JSON.parse('{{ expense_totals_1m_json|escapejs }}'),
+        "3": JSON.parse('{{ expense_totals_3m_json|escapejs }}'),
+        "6": JSON.parse('{{ expense_totals_6m_json|escapejs }}'),
+        "12": JSON.parse('{{ expense_totals_12m_json|escapejs }}')
+    };
+    const expenseLabels = JSON.parse('{{ expense_types_json|escapejs }}');
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const addBtn = document.getElementById('add-expense-btn');
+    const formContainer = document.getElementById('expense-form-container');
+    const cancelAddBtn = document.getElementById('cancel-add-btn');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+    const toggleChartBtn = document.getElementById('toggle-chart-btn');
+    const chartControls = document.getElementById('chart-controls');
+    const chartContainer = document.getElementById('chart-container');
+    const hideChartBtn = document.getElementById('hide-chart-btn');
+    const typeSelect = document.getElementById('chart-type');
+    const periodSelect = document.getElementById('time-period');
+    const updateBtn = document.getElementById('update-chart-btn');
+    const visualizeButtons = document.getElementById('visualize-buttons');
+
+    let chart = null;
+
+    if (addBtn) addBtn.addEventListener('click', () => {
+        formContainer.style.display = 'block';
+        addBtn.style.display = 'none';
+    });
+    if (cancelAddBtn) cancelAddBtn.addEventListener('click', () => {
+        formContainer.style.display = 'none';
+        if (addBtn) addBtn.style.display = 'inline-block';
+    });
+    if (cancelEditBtn) cancelEditBtn.addEventListener('click', () => {
+        window.location.href = "{% url 'finance:expense' %}";
+    });
+
+    toggleChartBtn.addEventListener('click', () => {
+        chartControls.style.display = 'block';
+        chartContainer.style.display = 'block';
+        visualizeButtons.style.display = 'none';
+        renderChart();
+    });
+    hideChartBtn.addEventListener('click', () => {
+        chartControls.style.display = 'none';
+        chartContainer.style.display = 'none';
+        visualizeButtons.style.display = 'flex';
+    });
+    updateBtn.addEventListener('click', renderChart);
+    typeSelect.addEventListener('change', renderChart);
+    periodSelect.addEventListener('change', renderChart);
+
+    function renderChart() {
+        if (chart) chart.destroy();
+        const ctx = document.getElementById('expenseChart').getContext('2d');
+        const type = typeSelect.value;
+        const period = periodSelect.value;
+        chart = new Chart(ctx, {
+            type: type,
+            data: {
+                labels: expenseLabels,
+                datasets: [{
+                    label: `Expenses (${period} Month${period > 1 ? 's' : ''})`,
+                    data: expenseDataByPeriod[period],
+                    backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: { callbacks: { label: ctx => ' ₹' + ctx.raw.toLocaleString() } }
+                },
+                scales: type !== 'pie' ? { y: { beginAtZero: true, ticks: { callback: v => '₹' + v } } } : {}
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
