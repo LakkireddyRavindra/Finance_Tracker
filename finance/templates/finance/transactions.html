@@ -1,0 +1,83 @@
+{% extends 'finance/base.html' %}
+{% block title %}Transactions | Finance Tracker{% endblock %}
+{% block content %}
+<div class="transactions-container">
+    <h2 class="mb-4">All Transactions</h2>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Income</h5>
+                <p class="card-text">₹{{ income_total|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Expenses</h5>
+                <p class="card-text">₹{{ expense_total|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Savings</h5>
+                <p class="card-text">₹{{ savings_total|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Net Balance</h5>
+                <p class="card-text">₹{{ net_balance|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="mb-3">
+    <div class="mb-4 d-flex justify-content-end gap-2">
+        <a href="{% url 'finance:download_transactions' %}" class="btn btn-success chart-btn">
+            <i class="fas fa-file-download"></i> Export Data
+        </a>
+    </div>
+</div>
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr
+                        class="{% if transaction.amount < 0 %}table-danger{% elif transaction.type == 'savings' %}table-info{% endif %}">
+                        <td class="text-capitalize">{{ transaction.type }}</td>
+                        <td>₹{{ transaction.amount|floatformat:2 }}</td>
+                        <td>{{ transaction.description }}</td>
+                        <td>{{ transaction.category }}</td>
+                        <td>{{ transaction.date|date:"M d, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4">No transactions found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}
