@@ -1,4 +1,27 @@
-
-# Python cache
-__pycache__/
+# Python
 *.pyc
+__pycache__/
+*.pyo
+*.pyd
+
+# Virtual env
+.venv/
+env/
+venv/
+
+# Django
+db.sqlite3
+staticfiles/
+
+# Env
+.env
+
+# VSCode / editor
+.vscode/
+.idea/
+*.swp
+
+# Migrations (optional - keep them in git once stable)
+**/migrations/*.pyc
+**/migrations/*.pyo
+**/migrations/__pycache__/
