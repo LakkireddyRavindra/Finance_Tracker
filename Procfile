@@ -1,2 +1,1 @@
-web: gunicorn finance_tracker.wsgi --log-file -
-release: python manage.py migrate && python manage.py collectstatic --noinput
+web: gunicorn finance_tracker.wsgi:application
