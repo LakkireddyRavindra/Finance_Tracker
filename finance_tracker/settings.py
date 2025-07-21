@@ -5,6 +5,8 @@ Django settings for finance_tracker project.
 import os
 from pathlib import Path
 import dj_database_url
+from decouple import config
+import whitenoise
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,6 +41,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+
 ]
 
 ROOT_URLCONF = 'finance_tracker.urls'
@@ -68,10 +72,7 @@ WSGI_APPLICATION = 'finance_tracker.wsgi.application'
 
 # Database: use dj-database-url with fallback to default local DB
 DATABASES = {
-    'default': dj_database_url.config(
-        default='postgresql://finance_tracker_0jda_user:32DJ5bRHjTOFBgjQ0uv23omU7sL05V08@dpg-d1ubsebuibrs738ailgg-a.oregon-postgres.render.com/finance_tracker_0jda',
-        conn_max_age=600, ssl_require=True
-    )
+    'default': dj_database_url.parse(config('DATABASE_URL'))
 }
 
 # Password validation
